@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Talkin - Global Chat</title>
+    <script src="https://socketio.org"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 20px; }
+        #chat-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #messages { height: 300px; border: 1px solid #ddd; overflow-y: scroll; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        input { flex: 1; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h2>Talkin: Real-time Translation Chat</h2>
+    
+    <div id="login-form">
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Enter Username...">
+            <input type="text" id="room" placeholder="Enter Room Name...">
+            <select id="language">
+                <option value="en">English</option>
+                <option value="ne">Nepali</option>
+                <option value="es">Spanish</option>
+                <option value="ja">Japanese</option>
+            </select>
+            <button onclick="joinRoom()">Join Room</button>
+        </div>
+    </div>
+
+    <div id="chat-box" style="display:none;">
+        <div id="messages"></div>
+        <div class="input-group">
+            <input type="text" id="message-input" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let currentUser = '';
+
+    function joinRoom() {
+        currentUser = document.getElementById('username').value;
+        const room = document.getElementById('room').value;
+        const language = document.getElementById('language').value;
+
+        if(!currentUser || !room) return alert("Please fill details");
+
+        socket.emit('join', { username: currentUser, room: room, language: language });
+        
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('chat-box').style.display = 'block';
+    }
+
+    function sendMessage() {
+        const msgInput = document.getElementById('message-input');
+        if(!msgInput.value) return;
+
+        socket.emit('send_message', { sender: currentUser, message: msgInput.value });
+        msgInput.value = '';
+    }
+
+    socket.on('status', function(data) {
+        const msgDiv = document.getElementById('messages');
+        msgDiv.innerHTML += `<p style="color:gray; font-style:italic;">${data.msg}</p>`;
+        msgDiv.scrollTop = msgDiv.scrollHeight;
+    });
+
+    socket.on('receive_message', function(data) {
+        const msgDiv = document.getElementById('messages');
+        let textToShow = data.translated;
+        if(data.sender === currentUser) {
+            textToShow = data.original;
+        }
+        msgDiv.innerHTML += `<p><strong>${data.sender}:</strong> ${textToShow} <small style="color:#aaa;">(${data.original})</small></p>`;
+        msgDiv.scrollTop = msgDiv.scrollHeight;
+    });
+</script>
+</body>
+</html>
